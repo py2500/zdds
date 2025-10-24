@@ -331,7 +331,7 @@
     <div class="container">
         <header>
             <h1>2025年潮汐数据查询 - 双地点对比</h1>
-            <p>湛江和瑙洲潮汐数据对比</p>
+            <p>湛江和硇洲潮汐数据对比</p>
         </header>
         
         <div class="date-selector">
@@ -352,7 +352,7 @@
             </div>
             <div class="legend-item">
                 <div class="legend-color naozhou-color"></div>
-                <span>瑙洲潮汐</span>
+                <span>硇洲潮汐</span>
             </div>
             <div class="legend-item">
                 <div class="legend-color high-color"></div>
@@ -368,7 +368,7 @@
             <thead>
                 <tr>
                     <th colspan="3">湛江潮汐数据</th>
-                    <th colspan="3">瑙洲潮汐数据</th>
+                    <th colspan="3">硇洲潮汐数据</th>
                 </tr>
                 <tr>
                     <th>时间</th>
@@ -1298,7 +1298,7 @@
             
             ctx.stroke();
             
-            // 绘制瑙洲潮汐曲线
+            // 绘制硇洲潮汐曲线
             ctx.beginPath();
             ctx.strokeStyle = '#448aff';
             ctx.lineWidth = 2;
@@ -1337,7 +1337,7 @@
                 ctx.fill();
             });
             
-            // 标记瑙洲的峰点和谷点
+            // 标记硇洲的峰点和谷点
             naozhouExtremes.peaks.forEach(index => {
                 const x = padding + index * scaleX;
                 const y = chartHeight - padding - (naozhouData[index] - minTide) * scaleY;
@@ -1392,7 +1392,7 @@
                     zhanjiangClass = 'low-tide';
                 }
                 
-                // 确定瑙洲数据的峰谷状态（0点和23点不标记）
+                // 确定硇洲数据的峰谷状态（0点和23点不标记）
                 let naozhouStatus = '';
                 let naozhouClass = '';
                 if (naozhouExtremes.peaks.includes(i) && i !== 0 && i !== 23) {
@@ -1536,7 +1536,7 @@
                 tooltip.innerHTML = `
                     <div>时间: ${hour}:00</div>
                     <div>湛江潮高: ${zhanjiangTide} cm</div>
-                    <div>瑙洲潮高: ${naozhouTide} cm</div>
+                    <div>硇洲潮高: ${naozhouTide} cm</div>
                 `;
                 
                 // 绘制垂直参考线
