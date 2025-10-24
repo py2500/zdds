@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<title>靠泊与引航方案生成器（完整版）</title>
+<style>
+  body { font-family: "Microsoft YaHei", Arial, sans-serif; margin: 24px; background:#f6f8fa; color:#222; }
+  h1 { color:#0b5fa5; }
+  .panel { background:#fff; padding:16px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+  label { display:block; margin:10px 0 4px; font-weight:600; }
+  input[type=text], input[type=number], select { width:300px; padding:8px; border:1px solid #d0d7de; border-radius:6px; }
+  button { margin-top:12px; padding:8px 14px; border-radius:6px; border:none; background:#0b66c3; color:#fff; cursor:pointer; }
+  button:hover { background:#094f93; }
+  textarea { width:98%; height:520px; padding:12px; border-radius:8px; border:1px solid #d0d7de; margin-top:12px; font-family:monospace; white-space:pre-wrap; }
+  .row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+  .note { color:#666; font-size:13px; margin-top:8px; }
+  .small { font-size:13px; color:#555; }
+</style>
+</head>
+<body>
+  <h1>靠泊与引航方案生成器（完整版）</h1>
+
+  <div class="panel">
+    <div class="row">
+      <div>
+        <label>靠泊泊位 X</label>
+        <select id="X">
+          <option value="601泊位">601泊位</option>
+          <option value="400泊位">400泊位</option>
+          <option value="300泊位">300泊位</option>
+          <option value="200泊位">200泊位</option>
+          <option value="210泊位">210泊位</option>
+        </select>
+      </div>
+
+      <div>
+        <label>航道水深 Y（米，可选）</label>
+        <select id="Y">
+          <option value="13.6">13.6</option>
+          <option value="18" selected>18</option>
+          <option value="21.5">21.5</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label>靠泊时间 A（例：10月22日11:30）</label>
+      <input id="A" type="text" value="10月22日11:30">
+      <div class="note">时间格式支持："M月D日HH:MM"（无需年份，默认当前年）。</div>
+
+      <label>靠泊前1小时硇洲潮高 B（米）</label>
+      <input id="B" type="number" step="0.01" value="2.7">
+
+      <label>靠泊时湛江港潮高 C（米）</label>
+      <input id="C" type="number" step="0.01" value="3.3">
+
+      <label>船舶靠泊吃水 D（米）</label>
+      <input id="D" type="number" step="0.01" value="18.47">
+
+      <label>离泊时间 E（例：10月23日18:00）</label>
+      <input id="E" type="text" value="10月23日18:00">
+
+      <label>离泊时湛江潮高 F（米）</label>
+      <input id="F" type="number" step="0.01" value="1.6">
+
+      <label>离泊1小时后硇洲潮高 G（米）</label>
+      <input id="G" type="number" step="0.01" value="1.77">
+
+      <label>船舶离泊吃水 H（米）</label>
+      <input id="H" type="number" step="0.01" value="13">
+
+      <label>龙骨高度 I（米）</label>
+      <input id="I" type="number" step="0.01" value="50.51">
+
+      <div style="margin-top:12px;">
+        <button onclick="generateAll()">生成完整文本</button>
+        <button onclick="copyOutput()" style="margin-left:8px;background:#2a9d8f">复制到剪贴板</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="small">说明：各泊位的港池/码头深度、特殊公式等按你提供的模板内固定数值（例如 601=24.0m、400=20.2m、300港深15.1m、200/210=22.3m）。页面会把模板中的公式用计算结果替换（保留两位小数，百分比保留两位）。</div>
+  </div>
+
+  <div class="panel">
+    <h3>输出结果</h3>
+    <textarea id="output" readonly></textarea>
+  </div>
+
+<script>
+/* ---------- 工具：解析与格式化中文时间 ---------- */
+function parseChineseDate(str){
+  if(!str) return null;
+  const match = str.match(/^\s*(\d{1,2})月(\d{1,2})日\s*(\d{1,2}):(\d{2})\s*$/);
+  if(!match) return null;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = parseInt(match[1],10);
+  const day = parseInt(match[2],10);
+  const hour = parseInt(match[3],10);
+  const minute = parseInt(match[4],10);
+  return new Date(year, month-1, day, hour, minute);
+}
+function formatChineseDate(d){
+  if(!d) return "（无法解析时间）";
+  const M = d.getMonth()+1;
+  const D = d.getDate();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${M}月${D}日${hh}:${mm}`;
+}
+
+/* ---------- 主生成函数 ---------- */
+function generateAll(){
+  const X = document.getElementById('X').value;
+  const Y = parseFloat(document.getElementById('Y').value);
+  const Araw = document.getElementById('A').value.trim();
+  const Adate = parseChineseDate(Araw);
+  const Aminus1 = Adate ? formatChineseDate(new Date(Adate.getTime() - 60*60*1000)) : "（无法解析时间）";
+  const B = parseFloat(document.getElementById('B').value);
+  const C = parseFloat(document.getElementById('C').value);
+  const D = parseFloat(document.getElementById('D').value);
+  const Eraw = document.getElementById('E').value.trim();
+  const Edate = parseChineseDate(Eraw);
+  const Eplus1 = Edate ? formatChineseDate(new Date(Edate.getTime() + 60*60*1000)) : "（无法解析时间）";
+  const E = Eraw;
+  const F = parseFloat(document.getElementById('F').value);
+  const G = parseFloat(document.getElementById('G').value); // 离泊1小时后硇洲潮高
+  const H = parseFloat(document.getElementById('H').value);
+  const I = parseFloat(document.getElementById('I').value);
+
+  // 泊位固定深度映射（根据你给出表）
+  const berthMap = {
+    "601泊位": { pool:24.0, front:24.0, length:450 },
+    "400泊位": { pool:20.2, front:20.2, length:null },
+    "300泊位": { pool:15.1, front:15.1, length:null },
+    "200泊位": { pool:22.3, front:22.3, length:null },
+    "210泊位": { pool:22.3, front:22.3, length:null }
+  };
+
+  // 计算辅助
+  function fmt(n){ return Number.isFinite(n) ? n.toFixed(2) : "—"; }
+  function pct(n){ return Number.isFinite(n) ? (n).toFixed(2) + "%" : "—"; }
+
+  // 生成文本按泊位模板完整填充
+  let out = "";
+
+  if (X === "601泊位") {
+    const surplus1 = Y + B - D; // 龙腾航道富余（靠前1小时）
+    const ratio1 = (surplus1 / D) * 100;
+    const poolSurplusDeparture = berthMap["601泊位"].pool + F - H; // 24.0 + F - H
+    const poolSurplusBerth = berthMap["601泊位"].pool + C - D; // 24.0 + C - D
+
+    out += `一、海事申请
+1、${Aminus1}时（硇洲潮高${B}米），龙腾航道浅点水深-${Y}米，富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米，比例为${fmt(surplus1)}÷${D}=${pct(ratio1)}。符合安全要求。${Araw}时靠601泊位，601泊位码头前沿水深为${fmt(berthMap["601泊位"].front)}米，码头长度${berthMap["601泊位"].length}米，满足靠泊要求。
+2、${E}时（潮高${F}米）离601泊位，离泊吃水${H}米，601码头港池水深为${fmt(berthMap["601泊位"].pool)}米，港池富余水深${fmt(berthMap["601泊位"].pool)}+${F}-${H}=${fmt(poolSurplusDeparture)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+
+二、引航方案
+（一）进港和靠
+1．人员的指派及接送方式
+根据该船情况指派一名一级或以上级别的责任引航员负责引航工作，引航员乘直升机（引航船或引航艇）登轮。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Aminus1}潮高${B}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米，富余水深与吃水比为${fmt(surplus1)}/${D}=${pct(ratio1)}，以上符合有关船舶通过龙腾航道规定的富余水深要求。
+考虑到在龙腾航道35#灯标—37#灯标之间和43#灯浮—47#灯浮航段中心线右侧水域有浅点，船舶进港时应靠近航道中心线航道水域航行，避开航道中浅点水域，确保富余水深满足要求，保障航行安全。
+3．船舶靠泊码头的富余水深必须符合有关规定要求
+湛江港${Araw}时潮高${C}米，601码头回旋水域底标高为-24.0米，港池富余水深24.0+${C}-${D}=${fmt(poolSurplusBerth)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+
+（二）离泊和出港
+1．人员的指派及接送方式
+根据该船情况指派一名一级或以上级别的责任引航员负责引航工作，引航员乘直升机（引航船或引航艇）离船。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Eplus1}时潮高${F}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${G}-${H}=${fmt(Y + G - H)}米，富余水深与吃水比为${fmt(Y + G - H)}/${H}=${pct((Y + G - H)/H*100)}，以上符合有关船舶通过龙腾航道规定的富余水深要求。
+3．船舶离泊码头的富余水深必须符合有关规定要求
+湛江港${E}时潮高${F}米，601码头回旋水域底标高为-24.0米，港池富余水深24.0+${F}-${H}=${fmt(poolSurplusDeparture)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+`;
+  }
+
+  else if (X === "400泊位") {
+    const surplus1 = Y + B - D; // 航道富余（靠前1小时）
+    const ratio1 = (surplus1 / D) * 100;
+    const poolDepth = berthMap["400泊位"].pool; // 20.2
+    const poolSurplusDeparture = poolDepth + F - H;
+    const poolSurplusBerth = poolDepth + C - D;
+
+    out += `一、海事申请
+1、${Aminus1}时（硇洲潮高${B}米），龙腾航道浅点水深-${Y}米，富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米，比例为${fmt(surplus1)}÷${D}=${pct(ratio1)}。符合安全要求。${Araw}时靠400泊位，400码头港池水深为${fmt(poolDepth)}米，满足靠泊要求。
+2、${E}时（湛江潮高${F}米）离400泊位，离泊吃水${H}米，400码头港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${F}-${H}=${fmt(poolSurplusDeparture)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+
+二、引航方案
+（一）进港和靠泊
+1．人员的指派及接送方式
+根据该船情况指派一名一级或以上级别的责任引航员负责引航工作，引航员乘直升机（引航船或引航艇）登轮。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Aminus1}时潮高${B}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米，富余水深与吃水比为${fmt(surplus1)}/${D}=${pct(ratio1)}，以上符合有关船舶通过龙腾航道规定的富余水深要求。
+考虑到在龙腾航道35#灯标—37#灯标之间和43#灯浮—47#灯浮航段中心线右侧水域有浅点，船舶进港时应靠近航道中心线航道水域航行，避开航道中浅点水域，确保富余水深满足要求，保障航行安全。
+3．船舶靠泊码头的富余水深必须符合有关规定要求
+湛江港${Araw}时潮高${C}米，400码头港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${C}-${D}=${fmt(poolSurplusBerth)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+
+（二）离泊和出港
+1．人员的指派及接送方式
+根据该船情况指派一名一级或以上级别的责任引航员负责引航工作，引航员乘直升机（引航船或引航艇）离船。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Eplus1}时潮高${G}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${G}-${H}=${fmt(Y + G - H)}米，富余水深与吃水比为${fmt(Y + G - H)}/${H}=${pct((Y + G - H)/H*100)}，以上符合有关船舶通过龙腾航道规定的富余水深要求。
+3．船舶离泊码头的富余水深必须符合有关船舶靠泊规定的0.5米富余水深的要求
+湛江港${E}时潮高${F}米，400码头港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${F}-${H}=${fmt(poolSurplusDeparture)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+`;
+  }
+
+  else if (X === "300泊位") {
+    // 300泊模板比较特殊（含净空计算）
+    const channelSurplus = Y + C - D; // Y + C - D
+    const channelRatio = (channelSurplus / D) * 100;
+    const berthDepth = berthMap["300泊位"].pool; // 15.1
+    const berthSurplus = berthDepth + C - D;
+    const thisPassClearance = 48 + 4.54 - C + D - I; // 48+4.54-C+D-I
+    const exitPassClearance = 48 + 4.54 - F + H - I; // 48+4.54-F+H-I
+    const exitPoolSurplus = berthDepth + F - H; // 15.1 + F - H
+
+    out += `一、海事申请
+1、${Araw}时（湛江潮高${C}米）靠三分公司300泊，进港航道浅点水深${Y}，富余水深为${Y}+${C}-${D}=${fmt(channelSurplus)}米，比例：${fmt(channelSurplus)}÷${D}=${pct(channelRatio)}，满足通航要求；300泊水深${fmt(berthDepth)}米，富余水深：${fmt(berthDepth)}+${C}-${D}=${fmt(berthSurplus)}，满足靠泊要求。
+2、本次通航富余高度：48+4.54-${C}+${D}-${I}=${fmt(thisPassClearance)}米。
+3、出来通航富余高度：48+4.54-${F}+${H}-${I}=${fmt(exitPassClearance)}米（${E}时出来，潮高${F}米，船舶吃水约${H}米）。
+二、引航方案
+（一）进港和靠泊
+1．人员的指派及接送方式
+根据该船情况指派一名二级或以上级别的责任引航员负责引航工作，引航员乘直升机（引航船或引航艇）登轮。
+2．船舶过海湾大桥富余高度及航道富余水深比必须符合有关规定要求
+湛江港${Araw}时潮高${C}米，当时海湾大桥水上高度为（48+4.54）-${C}=${fmt(48+4.54-C)}米，大船水上高度${fmt(I)}-${D ? D.toFixed(2) : "—"}（注：样例中示为大船水上高度50.51-D），海湾大桥净空富余高度为${fmt(thisPassClearance)}米；航道富余水深与吃水比为(${Y}+${C}-${D})/${D}=${pct(channelRatio)}，符合有关船舶通过海湾大桥及航道富余水深规定要求。
+3．船舶靠泊码头的富余水深必须符合有关规定要求
+湛江港${Araw}时潮高${C}米，码头富余水深${fmt(berthDepth)}+${C}-${D}=${fmt(berthSurplus)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+（二）离泊和出港
+1．人员的指派及接送方式
+根据该船情况指派一名二级或以上级别的责任引航员负责引航工作，引航员乘直升机（引航船或引航艇）离船。
+2．船舶离泊码头的富余水深必须符合有关规定要求
+湛江港${E}时潮高${F}米，300港池水深为${fmt(berthDepth)}米，港池富余水深${fmt(berthDepth)}+${F}-${H}=${fmt(exitPoolSurplus)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+3.船舶过海湾大桥富余高度及航道富余水深比必须符合有关规定要求
+湛江港${E}时潮高${F}米，当时海湾大桥水上高度为（48+4.54）-${F}=${fmt(48+4.54-F)}米，大船水上高度${fmt(I)}-${H}=${fmt(I - H)}米，海湾大桥净空富余高度为${fmt(exitPassClearance)}米；航道富余水深与吃水比为(${Y}+${F}-${H})/${H}=${pct((Y + F - H)/H*100)}，符合有关船舶通过海湾大桥及航道富余水深规定要求。
+`;
+  }
+
+  else if (X === "200泊位") {
+    const surplus1 = Y + B - D;
+    const ratio1 = (surplus1 / D) * 100;
+    const poolDepth = berthMap["200泊位"].pool; //22.3
+    const poolSurplusDeparture = poolDepth + F - H;
+
+    out += `一、海事申请
+1、龙腾航道浅点水深${Y}米，${Aminus1}时（硇洲潮高${B}米），进港富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米。富裕水深比例：${fmt(surplus1)}÷${D}=${pct(ratio1)}，符合安全要求。${Araw}时靠200#泊，200＃泊位水深为${fmt(poolDepth)}米，满足船舶靠泊要求。我港对此类船舶靠泊作业积累了丰富的经验，在作业过程中我们将加强安全值班，做好防火、防漏、防污等工作。为确保船舶安全靠离码头，届时特请贵局进行清道护航工作。
+2、${E}时（潮高${F}米）离200泊，离泊吃水${H}米，200泊位港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${F}-${H}=${fmt(poolSurplusDeparture)}米，满足安全要求。
+二、引航方案
+（一）进港和靠泊
+1．人员的指派及接送方式
+根据该船情况应指派一名一级或以上级别的引航员主引，另加一名全能二级或以上级别引航员作为副班引航员。引航员乘直升机（如果飞机受影响将改用引航船或引航艇）登轮。引航员登轮位置在20°59.5′00″N，110°55″E附近水域。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Aminus1}时潮高${B}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米，富余水深与吃水比为${fmt(surplus1)}/${D}=${pct(ratio1)}，以上符合有关船舶通过龙腾航道规定的富余水深要求。
+考虑到在龙腾航道35#灯标—37#灯标之间和43#灯浮—47#灯浮航段中心线右侧水域有浅点，船舶进港时应靠近航道中心线航道水域航行，避开航道中浅点水域，确保富余水深满足要求，保障航行安全。
+3．船舶靠泊码头的富余水深必须符合有关规定要求
+湛江港${Araw}时潮高${C}米，200码头港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${C}-${D}=${fmt(poolDepth + C - D)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+（二）离泊和出港
+1．人员的指派及接送方式
+根据该船情况指派一名一级的责任引航员负责引航工作。引航员乘直升机（引航船或引航艇）离船。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Eplus1}时潮高${G}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${G}-${H}=${fmt(Y + G - H)}米，富余水深与吃水比为${fmt(Y + G - H)}/${H}=${pct((Y + G - H)/H*100)}，以上符合有关船舶通过龙腾航道规定的富余水深要求。
+3．船舶离泊码头的富余水深必须符合有关船舶靠泊规定的0.5米富余水深的要求
+要求平潮缓流时离泊，湛江港${E}时潮高${F}米，200码头港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${F}-${H}=${fmt(poolSurplusDeparture)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+`;
+  }
+
+  else if (X === "210泊位") {
+    const surplus1 = Y + B - D;
+    const ratio1 = (surplus1 / D) * 100;
+    const poolDepth = berthMap["210泊位"].pool;
+    const poolSurplusDeparture = poolDepth + F - H;
+
+    out += `一、海事申请
+1、龙腾航道浅点水深${Y}米，${Aminus1}时（硇洲潮高${B}米），进港富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米。富裕水深比例：${fmt(surplus1)}÷${D}=${pct(ratio1)}，符合安全要求。${Araw}时靠210#泊，210＃泊位水深为${fmt(poolDepth)}米，满足船舶靠泊要求。我港对此类船舶靠泊作业积累了丰富的经验，在作业过程中我们将加强安全值班，做好防火、防漏、防污等工作。为确保船舶安全靠离码头，届时特请贵局进行清道护航工作。
+2、${E}时（潮高${F}米）离210泊，离泊吃水${H}米，210泊位港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${F}-${H}=${fmt(poolSurplusDeparture)}米，满足安全要求。
+二、引航方案
+（一）进港和靠泊
+1．人员的指派及接送方式
+根据该船情况指派一名一级或以上级别的责任引航员负责引航工作，另考虑到船舶比较大、航道条件比较复杂，加派一名引航员协助工作。引航员乘直升机（引航船或引航艇）登轮。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Aminus1}时潮高${B}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${B}-${D}=${fmt(surplus1)}米，富余水深与吃水比为${fmt(surplus1)}/${D}=${pct(ratio1)}，以上符合有关船舶通过龙腾航道规定的富余水深要求。
+考虑到在龙腾航道35#灯标—37#灯标之间和43#灯浮—47#灯浮航段中心线右侧水域有浅点，船舶进港时应靠近航道中心线航道水域航行，避开航道中浅点水域，确保富余水深满足要求，保障航行安全。
+3．船舶靠泊码头的富余水深必须符合有关规定要求
+湛江港${Araw}时潮高${C}米，210码头港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${C}-${D}=${fmt(poolDepth + C - D)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+（二）离泊和出港
+1．人员的指派及接送方式
+根据该船情况指派一名一级或以上级别的责任引航员负责引航工作，引航员乘直升机（引航船或引航艇）离船。
+2．船舶通过龙腾航道的富余水深必须符合有关规定要求
+湛江硇洲岛${Eplus1}时潮高${G}米，龙腾航道水深为-${Y}米，富余水深为${Y}+${G}-${H}=${fmt(Y + G - H)}米，富余水深与吃水比为${fmt(Y + G - H)}/${H}=${pct((Y + G - H)/H*100)}，以上符合有关船舶通过龙腾航道规定的富余水深要求.
+3．船舶离泊码头的富余水深必须符合有关船舶靠泊规定的0.5米富余水深的要求
+湛江港${E}时潮高${F}米，210码头港池水深为${fmt(poolDepth)}米，港池富余水深${fmt(poolDepth)}+${F}-${H}=${fmt(poolSurplusDeparture)}米，符合有关船舶靠泊规定的0.5米富余水深的要求。
+`;
+  }
+
+  // 输出
+  document.getElementById('output').value = out.trim();
+}
+
+/* 复制输出到剪贴板 */
+function copyOutput(){
+  const out = document.getElementById('output');
+  out.select();
+  try {
+    document.execCommand('copy');
+    alert('已复制到剪贴板，可以粘贴到 Word 或其它文档中。');
+  } catch (e){
+    alert('复制失败，请手动复制文本。');
+  }
+}
+</script>
+</body>
+</html>
