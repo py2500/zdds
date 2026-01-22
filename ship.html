@@ -12,13 +12,13 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
             background-color: #f2f2f2;
             height: 100vh;
             overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         /* Office风格标题栏 */
@@ -107,6 +107,43 @@
             appearance: auto;
         }
 
+        /* 搜索栏 */
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 6px 32px 6px 12px;
+            border: 1px solid #c8c8c8;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 200px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #2b579a;
+            box-shadow: 0 0 0 2px rgba(43, 87, 154, 0.2);
+            width: 250px;
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 6px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .search-btn:hover {
+            color: #2b579a;
+        }
+
         /* 主内容区域 */
         .main-container {
             display: flex;
@@ -114,7 +151,7 @@
             overflow: hidden;
         }
 
-        /* 侧边栏 - 目录 */
+        /* 侧边栏 - 目录和书签 */
         .sidebar {
             width: 280px;
             background-color: #f8f8f8;
@@ -129,15 +166,32 @@
             margin-left: -280px;
         }
 
-        .sidebar-header {
-            padding: 16px;
-            border-bottom: 1px solid #e0e0e0;
-            font-weight: 600;
-            color: #2b579a;
-            background-color: #f0f4f8;
+        .sidebar-tabs {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #f0f4f8;
+        }
+
+        .sidebar-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .sidebar-tab:hover {
+            background-color: #e8f0fe;
+        }
+
+        .sidebar-tab.active {
+            color: #2b579a;
+            border-bottom: 2px solid #2b579a;
+            background-color: #e1ecf4;
         }
 
         .sidebar-content {
@@ -146,36 +200,68 @@
             padding: 8px 0;
         }
 
-        .toc-item {
+        .toc-item, .bookmark-item {
             padding: 10px 16px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
             transition: background-color 0.2s;
             color: #333;
             font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .toc-item:hover {
+        .toc-item:hover, .bookmark-item:hover {
             background-color: #e8f0fe;
         }
 
-        .toc-item.active {
+        .toc-item.active, .bookmark-item.active {
             background-color: #d9e7fb;
             color: #2b579a;
             font-weight: 500;
             border-left: 4px solid #2b579a;
         }
 
-        .toc-item.level-2 {
-            padding-left: 32px;
-            font-size: 13.5px;
-            color: #555;
+        .bookmark-item .bookmark-actions {
+            display: flex;
+            gap: 8px;
         }
 
-        .toc-item.level-3 {
-            padding-left: 48px;
-            font-size: 13px;
+        .bookmark-item .bookmark-action-btn {
+            background: none;
+            border: none;
             color: #666;
+            cursor: pointer;
+            padding: 2px;
+            font-size: 12px;
+        }
+
+        .bookmark-item .bookmark-action-btn:hover {
+            color: #2b579a;
+        }
+
+        .bookmark-item .bookmark-note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .empty-message {
+            padding: 40px 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .empty-message i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            color: #ccc;
         }
 
         /* 阅读区域 */
@@ -222,6 +308,154 @@
             border-bottom: 1px dashed #eaeaea;
         }
 
+        /* 高亮搜索结果的样式 */
+        .search-highlight {
+            background-color: #fff3cd;
+            padding: 2px 0;
+            border-radius: 2px;
+            font-weight: 500;
+        }
+
+        .search-current-highlight {
+            background-color: #ffc107;
+            padding: 2px 0;
+            border-radius: 2px;
+            font-weight: 600;
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 搜索面板 */
+        .search-panel {
+            position: fixed;
+            top: 105px;
+            right: 20px;
+            width: 350px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .search-panel.hidden {
+            transform: translateY(-10px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .search-panel-header {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .search-panel-title {
+            font-weight: 600;
+            color: #2b579a;
+        }
+
+        .search-results-count {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .search-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .search-result-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .search-result-item.active {
+            background-color: #e8f0fe;
+        }
+
+        .search-result-chapter {
+            font-size: 12px;
+            color: #2b579a;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .search-result-preview {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .search-result-preview .search-highlight {
+            background-color: #fff3cd;
+            font-weight: 500;
+        }
+
+        .search-panel-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .search-nav-btn {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            color: #333;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .search-nav-btn:hover:not(:disabled) {
+            background-color: #e6e6e6;
+            border-color: #c8c8c8;
+        }
+
+        .search-nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .search-close-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 4px;
+            font-size: 16px;
+        }
+
+        .search-close-btn:hover {
+            color: #2b579a;
+        }
+
         /* 状态栏 */
         .status-bar {
             background-color: #f0f0f0;
@@ -256,6 +490,11 @@
             .reader-content {
                 padding: 30px 40px;
             }
+            
+            .search-panel {
+                width: 300px;
+                right: 10px;
+            }
         }
 
         @media (max-width: 768px) {
@@ -265,6 +504,12 @@
             
             .reader-content {
                 padding: 20px;
+            }
+            
+            .search-panel {
+                width: calc(100% - 40px);
+                right: 20px;
+                left: 20px;
             }
         }
 
@@ -426,6 +671,146 @@
                 opacity: 0;
             }
         }
+
+        /* 书签添加面板 */
+        .bookmark-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1001;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .bookmark-panel.hidden {
+            transform: translate(-50%, -50%) scale(0.9);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .bookmark-panel-header {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bookmark-panel-title {
+            font-weight: 600;
+            color: #2b579a;
+        }
+
+        .bookmark-panel-content {
+            padding: 20px;
+        }
+
+        .bookmark-form-group {
+            margin-bottom: 16px;
+        }
+
+        .bookmark-form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .bookmark-form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .bookmark-form-input:focus {
+            outline: none;
+            border-color: #2b579a;
+            box-shadow: 0 0 0 2px rgba(43, 87, 154, 0.2);
+        }
+
+        .bookmark-form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .bookmark-form-textarea:focus {
+            outline: none;
+            border-color: #2b579a;
+            box-shadow: 0 0 0 2px rgba(43, 87, 154, 0.2);
+        }
+
+        .bookmark-panel-footer {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background-color: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .bookmark-btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .bookmark-btn-primary {
+            background-color: #2b579a;
+            color: white;
+            border: none;
+        }
+
+        .bookmark-btn-primary:hover {
+            background-color: #1e3a6e;
+        }
+
+        .bookmark-btn-secondary {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .bookmark-btn-secondary:hover {
+            background-color: #e6e6e6;
+        }
+
+        /* 遮罩层 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            transition: opacity 0.3s;
+        }
+
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -474,6 +859,7 @@
                 <option value="'SimSun', serif">宋体</option>
                 <option value="'SimHei', sans-serif">黑体</option>
                 <option value="'KaiTi', serif">楷体</option>
+                <option value="'FangSong', serif">仿宋</option>
                 <option value="'Times New Roman', serif">Times New Roman</option>
             </select>
         </div>
@@ -488,6 +874,9 @@
         </div>
         
         <div class="tool-group">
+            <button class="tool-btn" id="addBookmark">
+                <i class="fas fa-bookmark"></i>添加书签
+            </button>
             <button class="tool-btn" id="darkMode">
                 <i class="fas fa-moon"></i>夜间模式
             </button>
@@ -495,21 +884,37 @@
                 <i class="fas fa-file-alt"></i>示例书籍
             </button>
         </div>
+        
+        <!-- 搜索功能 -->
+        <div class="tool-group">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="搜索全书内容...">
+                <button class="search-btn" id="searchButton">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- 主内容区域 -->
     <div class="main-container">
-        <!-- 侧边栏 - 目录 -->
+        <!-- 侧边栏 - 目录和书签 -->
         <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <span>目录</span>
-                <button class="tool-btn" id="closeSidebar">
-                    <i class="fas fa-times"></i>
-                </button>
+            <div class="sidebar-tabs">
+                <div class="sidebar-tab active" data-tab="toc">目录</div>
+                <div class="sidebar-tab" data-tab="bookmarks">书签</div>
             </div>
             <div class="sidebar-content" id="tocContainer">
                 <!-- 目录将动态生成在这里 -->
                 <div class="toc-item">打开EPUB文件后，目录将显示在这里</div>
+            </div>
+            <div class="sidebar-content hidden" id="bookmarksContainer">
+                <!-- 书签将动态生成在这里 -->
+                <div class="empty-message">
+                    <i class="fas fa-bookmark"></i>
+                    <p>暂无书签</p>
+                    <p style="font-size: 12px; margin-top: 8px;">点击工具栏的"添加书签"按钮创建书签</p>
+                </div>
             </div>
         </div>
 
@@ -520,12 +925,12 @@
                 <div class="file-upload-area" id="uploadArea">
                     <i class="fas fa-book-open"></i>
                     <h2>EPUB阅读器</h2>
-                    <p>这是一个具有Office风格的EPUB电子书阅读器，支持目录导航、字体调整和快捷键翻页功能。</p>
+                    <p>这是一个具有Office风格的EPUB电子书阅读器，支持目录导航、字体调整、全文搜索、书签管理和快捷键翻页功能。</p>
                     <p>请上传一个EPUB文件开始阅读。</p>
                     <button class="upload-btn" id="uploadBtn">选择EPUB文件</button>
                     <button class="upload-btn" id="sampleBtn" style="margin-top: 10px; background-color: #4CAF50;">加载示例书籍</button>
                     <p style="margin-top: 20px; font-size: 14px; color: #888;">
-                        提示：使用<span style="color: #2b579a; font-weight: bold;">← →</span>方向键翻页，<span style="color: #2b579a; font-weight: bold;">空格键</span>向下翻页
+                        提示：使用<span style="color: #2b579a; font-weight: bold;">← →</span>方向键翻页，<span style="color: #2b579a; font-weight: bold;">空格键</span>向下翻页，<span style="color: #2b579a; font-weight: bold;">Ctrl+F</span>快速搜索，<span style="color: #2b579a; font-weight: bold;">Ctrl+B</span>添加书签
                     </p>
                 </div>
                 
@@ -551,6 +956,60 @@
         </div>
     </div>
 
+    <!-- 搜索面板 -->
+    <div class="search-panel hidden" id="searchPanel">
+        <div class="search-panel-header">
+            <div class="search-panel-title">搜索结果</div>
+            <div class="search-results-count" id="searchResultsCount">0 个结果</div>
+            <button class="search-close-btn" id="closeSearchPanel">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="search-panel-content" id="searchResults">
+            <!-- 搜索结果将动态显示在这里 -->
+            <div style="padding: 40px; text-align: center; color: #666;">
+                <i class="fas fa-search" style="font-size: 32px; margin-bottom: 16px;"></i>
+                <p>输入关键词搜索全书内容</p>
+            </div>
+        </div>
+        <div class="search-panel-footer">
+            <button class="search-nav-btn" id="prevResult" disabled>
+                <i class="fas fa-chevron-up"></i>上一个
+            </button>
+            <div id="currentResult">0 / 0</div>
+            <button class="search-nav-btn" id="nextResult" disabled>
+                下一个<i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 书签添加面板 -->
+    <div class="bookmark-panel hidden" id="bookmarkPanel">
+        <div class="bookmark-panel-header">
+            <div class="bookmark-panel-title">添加书签</div>
+            <button class="search-close-btn" id="closeBookmarkPanel">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="bookmark-panel-content">
+            <div class="bookmark-form-group">
+                <label class="bookmark-form-label">书签名称</label>
+                <input type="text" id="bookmarkName" class="bookmark-form-input" placeholder="请输入书签名称" value="章节书签">
+            </div>
+            <div class="bookmark-form-group">
+                <label class="bookmark-form-label">备注（可选）</label>
+                <textarea id="bookmarkNote" class="bookmark-form-textarea" placeholder="添加备注..."></textarea>
+            </div>
+        </div>
+        <div class="bookmark-panel-footer">
+            <button class="bookmark-btn bookmark-btn-secondary" id="cancelBookmark">取消</button>
+            <button class="bookmark-btn bookmark-btn-primary" id="saveBookmark">保存书签</button>
+        </div>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay hidden" id="overlay"></div>
+
     <!-- 状态栏 -->
     <div class="status-bar">
         <div class="status-item">
@@ -559,11 +1018,19 @@
         </div>
         <div class="status-item">
             <i class="fas fa-font"></i>
-            <span>字体大小: <span id="currentFontSize">16</span>px</span>
+            <span>字体: <span id="currentFont">Segoe UI</span>, 大小: <span id="currentFontSize">16</span>px</span>
+        </div>
+        <div class="status-item">
+            <i class="fas fa-search"></i>
+            <span>搜索: <span id="searchStatus">无</span></span>
+        </div>
+        <div class="status-item">
+            <i class="fas fa-bookmark"></i>
+            <span>书签: <span id="bookmarkCount">0</span> 个</span>
         </div>
         <div class="status-item">
             <i class="fas fa-keyboard"></i>
-            <span>快捷键: ← 上一页, → 下一页, 空格键向下翻页</span>
+            <span>快捷键: ← → 翻页, Ctrl+F 搜索, Ctrl+B 书签</span>
         </div>
     </div>
 
@@ -582,6 +1049,16 @@
         let fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
         let darkMode = false;
         let bookTitle = "未命名书籍";
+        
+        // 搜索相关变量
+        let searchResults = [];
+        let currentSearchIndex = -1;
+        let currentSearchTerm = '';
+        let searchIndex = []; // 全文搜索索引
+        
+        // 书签相关变量
+        let bookmarks = [];
+        let currentBookmarkId = 1;
 
         // DOM元素
         const fileInput = document.getElementById('fileInput');
@@ -591,13 +1068,13 @@
         const bookContent = document.getElementById('bookContent');
         const readerContent = document.getElementById('readerContent');
         const tocContainer = document.getElementById('tocContainer');
+        const bookmarksContainer = document.getElementById('bookmarksContainer');
         const chapterTitle = document.getElementById('chapterTitle');
         const chapterContent = document.getElementById('chapterContent');
         const currentChapterSpan = document.getElementById('currentChapter');
         const totalChaptersSpan = document.getElementById('totalChapters');
         const bookTitleSpan = document.getElementById('bookTitle');
         const toggleSidebarBtn = document.getElementById('toggleSidebar');
-        const closeSidebarBtn = document.getElementById('closeSidebar');
         const sidebar = document.getElementById('sidebar');
         const zoomInBtn = document.getElementById('zoomIn');
         const zoomOutBtn = document.getElementById('zoomOut');
@@ -610,7 +1087,32 @@
         const pageTurnHint = document.getElementById('pageTurnHint');
         const openFileBtn = document.getElementById('openFile');
         const loadingIndicator = document.getElementById('loadingIndicator');
-
+        
+        // 搜索相关DOM元素
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const searchPanel = document.getElementById('searchPanel');
+        const closeSearchPanel = document.getElementById('closeSearchPanel');
+        const searchResultsContainer = document.getElementById('searchResults');
+        const searchResultsCount = document.getElementById('searchResultsCount');
+        const prevResultBtn = document.getElementById('prevResult');
+        const nextResultBtn = document.getElementById('nextResult');
+        const currentResultSpan = document.getElementById('currentResult');
+        const searchStatusSpan = document.getElementById('searchStatus');
+        
+        // 书签相关DOM元素
+        const addBookmarkBtn = document.getElementById('addBookmark');
+        const bookmarkPanel = document.getElementById('bookmarkPanel');
+        const closeBookmarkPanel = document.getElementById('closeBookmarkPanel');
+        const cancelBookmarkBtn = document.getElementById('cancelBookmark');
+        const saveBookmarkBtn = document.getElementById('saveBookmark');
+        const bookmarkNameInput = document.getElementById('bookmarkName');
+        const bookmarkNoteInput = document.getElementById('bookmarkNote');
+        const overlay = document.getElementById('overlay');
+        const bookmarkCountSpan = document.getElementById('bookmarkCount');
+        const currentFontSpan = document.getElementById('currentFont');
+        const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+        
         // 模拟的EPUB数据（备用）
         const sampleBook = {
             title: "示例电子书：Web开发指南",
@@ -630,12 +1132,14 @@
 &lt;body&gt;
     页面内容...
 &lt;/body&gt;
-&lt;/html&gt;</pre>`
+&lt;/html&gt;</pre>
+                    <p>HTML语言简单易学，是Web开发的基石。学习HTML是成为前端开发者的第一步。</p>`
                 },
                 {
                     title: "第二章：CSS样式",
                     content: `<h2>CSS简介</h2>
                     <p>CSS（层叠样式表）是一种样式表语言，用于描述HTML或XML文档的呈现方式。CSS描述了元素在屏幕、纸张、语音或其他媒体上应该如何被渲染。</p>
+                    <p>CSS可以使网页内容与表现形式分离，极大地提高了开发效率。</p>
                     <h2>CSS选择器</h2>
                     <p>CSS选择器用于选择要样式化的HTML元素。常见的选择器包括：</p>
                     <p>• 元素选择器（如 p, h1, div）</p>
@@ -643,12 +1147,14 @@
                     <p>• ID选择器（如 #idName）</p>
                     <p>• 属性选择器（如 [type="text"]）</p>
                     <h2>盒模型</h2>
-                    <p>CSS盒模型是CSS布局的基础。每个元素被表示为一个矩形框，由内容、内边距、边框和外边距组成。</p>`
+                    <p>CSS盒模型是CSS布局的基础。每个元素被表示为一个矩形框，由内容、内边距、边框和外边距组成。</p>
+                    <p>理解盒模型对于掌握CSS布局至关重要，它影响着元素在页面上的排列方式。</p>`
                 },
                 {
                     title: "第三章：JavaScript编程",
                     content: `<h2>JavaScript简介</h2>
                     <p>JavaScript是一种高级的、解释型的编程语言。它是一门基于原型、函数先行的语言，是一门多范式的语言，它支持面向对象编程、命令式编程和函数式编程。</p>
+                    <p>JavaScript最初是为网页添加交互性而设计的，现在已成为全栈开发的重要语言。</p>
                     <h2>基本语法</h2>
                     <p>JavaScript的语法与C语言家族类似，包括变量声明、条件语句、循环语句、函数定义等。</p>
                     <p>示例代码：</p>
@@ -660,7 +1166,8 @@ console.log(message);</pre>
                     <p>• 查找HTML元素</p>
                     <p>• 改变HTML内容</p>
                     <p>• 改变CSS样式</p>
-                    <p>• 对页面事件作出反应</p>`
+                    <p>• 对页面事件作出反应</p>
+                    <p>JavaScript的DOM操作能力使其成为前端开发的核心技术。</p>`
                 }
             ]
         };
@@ -674,7 +1181,6 @@ console.log(message);</pre>
             loadSampleBtn.addEventListener('click', loadSampleBook);
             fileInput.addEventListener('change', handleFileUpload);
             toggleSidebarBtn.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
-            closeSidebarBtn.addEventListener('click', () => sidebar.classList.add('collapsed'));
             zoomInBtn.addEventListener('click', increaseFontSize);
             zoomOutBtn.addEventListener('click', decreaseFontSize);
             fontSizeSelect.addEventListener('change', changeFontSize);
@@ -682,6 +1188,40 @@ console.log(message);</pre>
             prevPageBtn.addEventListener('click', prevChapter);
             nextPageBtn.addEventListener('click', nextChapter);
             darkModeBtn.addEventListener('click', toggleDarkMode);
+            
+            // 搜索功能事件绑定
+            searchButton.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            closeSearchPanel.addEventListener('click', () => {
+                searchPanel.classList.add('hidden');
+                clearSearchHighlights();
+            });
+            prevResultBtn.addEventListener('click', navigateToPrevResult);
+            nextResultBtn.addEventListener('click', navigateToNextResult);
+            
+            // 书签功能事件绑定
+            addBookmarkBtn.addEventListener('click', showAddBookmarkPanel);
+            closeBookmarkPanel.addEventListener('click', () => {
+                bookmarkPanel.classList.add('hidden');
+                overlay.classList.add('hidden');
+            });
+            cancelBookmarkBtn.addEventListener('click', () => {
+                bookmarkPanel.classList.add('hidden');
+                overlay.classList.add('hidden');
+            });
+            saveBookmarkBtn.addEventListener('click', saveBookmark);
+            
+            // 侧边栏标签切换
+            sidebarTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    switchSidebarTab(tabName);
+                });
+            });
             
             // 键盘快捷键
             document.addEventListener('keydown', handleKeydown);
@@ -693,6 +1233,9 @@ console.log(message);</pre>
                     pageTurnHint.classList.add('hidden');
                 }, 3000);
             }, 1000);
+            
+            // 加载保存的书签
+            loadBookmarksFromStorage();
             
             // 初始状态
             updateStatusBar();
@@ -964,12 +1507,457 @@ console.log(message);</pre>
             // 生成目录
             generateTOC();
             
+            // 创建搜索索引
+            createSearchIndex();
+            
             // 加载第一章
             loadChapter(0);
             
             // 更新状态栏
             updateStatusBar();
         }
+
+        // 创建全文搜索索引
+        function createSearchIndex() {
+            searchIndex = [];
+            
+            chapters.forEach((chapter, chapterIndex) => {
+                // 提取纯文本用于搜索
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = chapter.content;
+                const text = tempDiv.textContent || tempDiv.innerText || '';
+                
+                // 将文本分割成句子或段落
+                const sentences = text.split(/[。！？\.!\?]/).filter(s => s.trim().length > 0);
+                
+                // 为每个句子创建索引项
+                sentences.forEach((sentence, sentenceIndex) => {
+                    const trimmedSentence = sentence.trim();
+                    if (trimmedSentence.length > 10) { // 只索引较长的句子
+                        searchIndex.push({
+                            chapterIndex: chapterIndex,
+                            chapterTitle: chapter.title,
+                            text: trimmedSentence,
+                            position: sentenceIndex
+                        });
+                    }
+                });
+            });
+            
+            console.log('搜索索引创建完成，共', searchIndex.length, '个索引项');
+        }
+
+        // 执行全文搜索
+        function performSearch() {
+            const searchTerm = searchInput.value.trim();
+            
+            if (!searchTerm) {
+                showMessage('请输入搜索关键词', 'warning');
+                return;
+            }
+            
+            if (chapters.length === 0) {
+                showMessage('请先加载书籍', 'warning');
+                return;
+            }
+            
+            // 保存搜索词
+            currentSearchTerm = searchTerm;
+            
+            // 执行搜索
+            searchResults = [];
+            
+            // 搜索所有章节
+            chapters.forEach((chapter, chapterIndex) => {
+                // 创建临时DOM元素来提取文本
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = chapter.content;
+                const text = tempDiv.textContent || tempDiv.innerText || '';
+                
+                // 搜索关键词
+                const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                let match;
+                
+                while ((match = regex.exec(text)) !== null) {
+                    // 获取上下文（匹配位置前后的文本）
+                    const start = Math.max(0, match.index - 50);
+                    const end = Math.min(text.length, match.index + searchTerm.length + 100);
+                    const context = text.substring(start, end);
+                    
+                    // 高亮显示匹配的关键词
+                    const highlightedContext = context.replace(
+                        new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+                        match => `<span class="search-highlight">${match}</span>`
+                    );
+                    
+                    // 添加搜索结果
+                    searchResults.push({
+                        chapterIndex: chapterIndex,
+                        chapterTitle: chapter.title,
+                        matchIndex: match.index,
+                        preview: highlightedContext,
+                        position: match.index
+                    });
+                }
+            });
+            
+            // 显示搜索结果
+            displaySearchResults();
+            
+            // 显示搜索面板
+            searchPanel.classList.remove('hidden');
+            
+            // 更新状态栏
+            searchStatusSpan.textContent = `"${searchTerm}" (${searchResults.length}个结果)`;
+            
+            if (searchResults.length > 0) {
+                showMessage(`找到 ${searchResults.length} 个结果`, 'success');
+                // 自动跳转到第一个结果
+                currentSearchIndex = 0;
+                navigateToSearchResult(currentSearchIndex);
+            } else {
+                showMessage(`未找到包含"${searchTerm}"的内容`, 'info');
+            }
+        }
+
+        // 显示搜索结果
+        function displaySearchResults() {
+            searchResultsCount.textContent = `${searchResults.length} 个结果`;
+            currentResultSpan.textContent = `0 / ${searchResults.length}`;
+            
+            if (searchResults.length === 0) {
+                searchResultsContainer.innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: #666;">
+                        <i class="fas fa-search" style="font-size: 32px; margin-bottom: 16px;"></i>
+                        <p>未找到包含"${currentSearchTerm}"的内容</p>
+                    </div>
+                `;
+                prevResultBtn.disabled = true;
+                nextResultBtn.disabled = true;
+                return;
+            }
+            
+            // 更新导航按钮状态
+            prevResultBtn.disabled = searchResults.length === 0;
+            nextResultBtn.disabled = searchResults.length === 0;
+            
+            // 生成搜索结果列表
+            let resultsHTML = '';
+            
+            searchResults.forEach((result, index) => {
+                const isActive = index === currentSearchIndex;
+                resultsHTML += `
+                    <div class="search-result-item ${isActive ? 'active' : ''}" data-index="${index}">
+                        <div class="search-result-chapter">${result.chapterTitle}</div>
+                        <div class="search-result-preview">${result.preview}</div>
+                    </div>
+                `;
+            });
+            
+            searchResultsContainer.innerHTML = resultsHTML;
+            
+            // 为结果项添加点击事件
+            document.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const index = parseInt(item.dataset.index);
+                    navigateToSearchResult(index);
+                });
+            });
+            
+            // 确保当前活动项可见
+            if (currentSearchIndex >= 0) {
+                const activeItem = document.querySelector(`.search-result-item[data-index="${currentSearchIndex}"]`);
+                if (activeItem) {
+                    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        }
+
+        // 导航到搜索结果
+        function navigateToSearchResult(index) {
+            if (index < 0 || index >= searchResults.length) return;
+            
+            currentSearchIndex = index;
+            const result = searchResults[index];
+            
+            // 加载对应的章节
+            loadChapter(result.chapterIndex);
+            
+            // 高亮显示搜索结果
+            highlightSearchResult(result);
+            
+            // 更新搜索结果面板
+            displaySearchResults();
+            
+            // 更新当前结果指示器
+            currentResultSpan.textContent = `${index + 1} / ${searchResults.length}`;
+            
+            // 更新导航按钮状态
+            prevResultBtn.disabled = index === 0;
+            nextResultBtn.disabled = index === searchResults.length - 1;
+        }
+
+        // 导航到上一个搜索结果
+        function navigateToPrevResult() {
+            if (currentSearchIndex > 0) {
+                navigateToSearchResult(currentSearchIndex - 1);
+            }
+        }
+
+        // 导航到下一个搜索结果
+        function navigateToNextResult() {
+            if (currentSearchIndex < searchResults.length - 1) {
+                navigateToSearchResult(currentSearchIndex + 1);
+            }
+        }
+
+        // 高亮显示搜索结果
+        function highlightSearchResult(result) {
+            // 先清除之前的高亮
+            clearSearchHighlights();
+            
+            // 高亮当前搜索结果
+            const chapterText = chapterContent.textContent || chapterContent.innerText || '';
+            const regex = new RegExp(currentSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            
+            // 获取原始HTML内容
+            let htmlContent = chapters[result.chapterIndex].content;
+            
+            // 高亮所有匹配项
+            htmlContent = htmlContent.replace(
+                regex,
+                (match, offset) => {
+                    // 检查是否是当前搜索结果
+                    const isCurrent = offset >= result.position && offset < result.position + currentSearchTerm.length;
+                    const className = isCurrent ? 'search-current-highlight' : 'search-highlight';
+                    return `<span class="${className}">${match}</span>`;
+                }
+            );
+            
+            // 更新章节内容
+            chapterContent.innerHTML = htmlContent;
+            
+            // 滚动到当前高亮的位置
+            setTimeout(() => {
+                const currentHighlight = chapterContent.querySelector('.search-current-highlight');
+                if (currentHighlight) {
+                    currentHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+
+        // 清除搜索高亮
+        function clearSearchHighlights() {
+            const highlights = chapterContent.querySelectorAll('.search-highlight, .search-current-highlight');
+            highlights.forEach(highlight => {
+                const parent = highlight.parentNode;
+                parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                parent.normalize(); // 合并相邻的文本节点
+            });
+            
+            // 重置搜索状态
+            searchStatusSpan.textContent = '无';
+        }
+
+        // 书签功能
+        function showAddBookmarkPanel() {
+            if (chapters.length === 0) {
+                showMessage('请先加载书籍', 'warning');
+                return;
+            }
+            
+            // 设置默认书签名称
+            bookmarkNameInput.value = `第${currentChapter + 1}章: ${chapters[currentChapter].title.substring(0, 30)}${chapters[currentChapter].title.length > 30 ? '...' : ''}`;
+            bookmarkNoteInput.value = '';
+            
+            // 显示书签面板
+            bookmarkPanel.classList.remove('hidden');
+            overlay.classList.remove('hidden');
+            
+            // 聚焦到名称输入框
+            setTimeout(() => {
+                bookmarkNameInput.focus();
+                bookmarkNameInput.select();
+            }, 100);
+        }
+
+        function saveBookmark() {
+            const name = bookmarkNameInput.value.trim();
+            const note = bookmarkNoteInput.value.trim();
+            
+            if (!name) {
+                showMessage('请输入书签名称', 'warning');
+                bookmarkNameInput.focus();
+                return;
+            }
+            
+            // 创建书签对象
+            const bookmark = {
+                id: currentBookmarkId++,
+                name: name,
+                note: note,
+                chapterIndex: currentChapter,
+                chapterTitle: chapters[currentChapter].title,
+                timestamp: new Date().toLocaleString('zh-CN'),
+                scrollPosition: readerContent.scrollTop
+            };
+            
+            // 添加到书签列表
+            bookmarks.push(bookmark);
+            
+            // 保存到本地存储
+            saveBookmarksToStorage();
+            
+            // 更新书签显示
+            displayBookmarks();
+            
+            // 关闭面板
+            bookmarkPanel.classList.add('hidden');
+            overlay.classList.add('hidden');
+            
+            // 显示成功消息
+            showMessage('书签添加成功', 'success');
+            
+            // 切换到书签标签页
+            switchSidebarTab('bookmarks');
+        }
+
+        function deleteBookmark(bookmarkId) {
+            // 从书签列表中移除
+            bookmarks = bookmarks.filter(bookmark => bookmark.id !== bookmarkId);
+            
+            // 保存到本地存储
+            saveBookmarksToStorage();
+            
+            // 更新书签显示
+            displayBookmarks();
+            
+            // 显示成功消息
+            showMessage('书签已删除', 'success');
+        }
+
+        function navigateToBookmark(bookmark) {
+            // 加载对应的章节
+            loadChapter(bookmark.chapterIndex);
+            
+            // 恢复滚动位置
+            setTimeout(() => {
+                readerContent.scrollTop = bookmark.scrollPosition;
+            }, 100);
+            
+            // 切换到目录标签页
+            switchSidebarTab('toc');
+        }
+
+        function displayBookmarks() {
+            if (bookmarks.length === 0) {
+                bookmarksContainer.innerHTML = `
+                    <div class="empty-message">
+                        <i class="fas fa-bookmark"></i>
+                        <p>暂无书签</p>
+                        <p style="font-size: 12px; margin-top: 8px;">点击工具栏的"添加书签"按钮创建书签</p>
+                    </div>
+                `;
+                bookmarkCountSpan.textContent = '0';
+                return;
+            }
+            
+            let bookmarksHTML = '';
+            
+            // 按时间倒序排列（最新的在前）
+            bookmarks.sort((a, b) => b.id - a.id);
+            
+            bookmarks.forEach(bookmark => {
+                bookmarksHTML += `
+                    <div class="bookmark-item" data-id="${bookmark.id}">
+                        <div>
+                            <div>${bookmark.name}</div>
+                            <div class="bookmark-note" title="${bookmark.note}">${bookmark.note || '无备注'}</div>
+                            <div style="font-size: 11px; color: #888; margin-top: 4px;">${bookmark.timestamp}</div>
+                        </div>
+                        <div class="bookmark-actions">
+                            <button class="bookmark-action-btn" title="跳转到书签" onclick="navigateToBookmarkFromGlobal(${bookmark.id})">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <button class="bookmark-action-btn" title="删除书签" onclick="deleteBookmarkFromGlobal(${bookmark.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            bookmarksContainer.innerHTML = bookmarksHTML;
+            bookmarkCountSpan.textContent = bookmarks.length.toString();
+        }
+
+        // 从本地存储加载书签
+        function loadBookmarksFromStorage() {
+            try {
+                const savedBookmarks = localStorage.getItem('epubReaderBookmarks');
+                if (savedBookmarks) {
+                    bookmarks = JSON.parse(savedBookmarks);
+                    
+                    // 确保每个书签都有id
+                    if (bookmarks.length > 0) {
+                        // 找到最大的id
+                        const maxId = Math.max(...bookmarks.map(b => b.id || 0));
+                        currentBookmarkId = maxId + 1;
+                    }
+                    
+                    displayBookmarks();
+                }
+            } catch (error) {
+                console.error('加载书签失败:', error);
+                bookmarks = [];
+            }
+        }
+
+        // 保存书签到本地存储
+        function saveBookmarksToStorage() {
+            try {
+                localStorage.setItem('epubReaderBookmarks', JSON.stringify(bookmarks));
+            } catch (error) {
+                console.error('保存书签失败:', error);
+                showMessage('保存书签失败', 'error');
+            }
+        }
+
+        // 切换侧边栏标签页
+        function switchSidebarTab(tabName) {
+            // 更新标签页状态
+            sidebarTabs.forEach(tab => {
+                if (tab.dataset.tab === tabName) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            // 显示对应的内容
+            if (tabName === 'toc') {
+                tocContainer.classList.remove('hidden');
+                bookmarksContainer.classList.add('hidden');
+            } else if (tabName === 'bookmarks') {
+                tocContainer.classList.add('hidden');
+                bookmarksContainer.classList.remove('hidden');
+                displayBookmarks();
+            }
+        }
+
+        // 全局函数，用于在HTML中调用
+        window.navigateToBookmarkFromGlobal = function(bookmarkId) {
+            const bookmark = bookmarks.find(b => b.id === bookmarkId);
+            if (bookmark) {
+                navigateToBookmark(bookmark);
+            }
+        };
+        
+        window.deleteBookmarkFromGlobal = function(bookmarkId) {
+            if (confirm('确定要删除这个书签吗？')) {
+                deleteBookmark(bookmarkId);
+            }
+        };
 
         // 显示加载指示器
         function showLoading(show) {
@@ -1038,6 +2026,9 @@ console.log(message);</pre>
                 // 生成目录
                 generateTOC();
                 
+                // 创建搜索索引
+                createSearchIndex();
+                
                 // 加载第一章
                 loadChapter(0);
                 
@@ -1088,6 +2079,9 @@ console.log(message);</pre>
                     
                     // 加载章节
                     loadChapter(index);
+                    
+                    // 清除搜索高亮
+                    clearSearchHighlights();
                 });
                 
                 tocContainer.appendChild(tocItem);
@@ -1128,12 +2122,14 @@ console.log(message);</pre>
                     item.classList.add('active');
                     
                     // 滚动到活动项
-                    const sidebarContent = document.querySelector('.sidebar-content');
-                    const itemTop = item.offsetTop;
-                    const sidebarHeight = sidebarContent.clientHeight;
-                    
-                    if (itemTop > sidebarHeight / 2) {
-                        sidebarContent.scrollTop = itemTop - sidebarHeight / 2;
+                    const sidebarContent = document.querySelector('.sidebar-content:not(.hidden)');
+                    if (sidebarContent) {
+                        const itemTop = item.offsetTop;
+                        const sidebarHeight = sidebarContent.clientHeight;
+                        
+                        if (itemTop > sidebarHeight / 2) {
+                            sidebarContent.scrollTop = itemTop - sidebarHeight / 2;
+                        }
                     }
                 } else {
                     item.classList.remove('active');
@@ -1179,19 +2175,70 @@ console.log(message);</pre>
             applyFontStyles();
         }
 
-        // 改变字体
+        // 改变字体 - 修复字体切换bug
         function changeFontFamily() {
             fontFamily = fontFamilySelect.value;
+            const selectedOption = fontFamilySelect.options[fontFamilySelect.selectedIndex];
+            const fontName = selectedOption.text;
+            currentFontSpan.textContent = fontName;
             applyFontStyles();
         }
 
-        // 应用字体样式
+        // 应用字体样式 - 修复字体应用问题
         function applyFontStyles() {
+            // 应用字体到阅读区域
             readerContent.style.fontSize = `${fontSize}px`;
             readerContent.style.fontFamily = fontFamily;
             
+            // 应用字体到章节内容
+            chapterContent.style.fontFamily = fontFamily;
+            chapterContent.style.fontSize = `${fontSize}px`;
+            
             // 更新状态栏
             document.getElementById('currentFontSize').textContent = fontSize;
+            
+            // 保存字体设置到本地存储
+            saveFontSettings();
+        }
+
+        // 保存字体设置到本地存储
+        function saveFontSettings() {
+            try {
+                localStorage.setItem('epubReaderFontSettings', JSON.stringify({
+                    fontSize: fontSize,
+                    fontFamily: fontFamily
+                }));
+            } catch (error) {
+                console.error('保存字体设置失败:', error);
+            }
+        }
+
+        // 加载字体设置从本地存储
+        function loadFontSettings() {
+            try {
+                const savedSettings = localStorage.getItem('epubReaderFontSettings');
+                if (savedSettings) {
+                    const settings = JSON.parse(savedSettings);
+                    fontSize = settings.fontSize || 16;
+                    fontFamily = settings.fontFamily || "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+                    
+                    // 更新UI
+                    fontSizeSelect.value = fontSize;
+                    
+                    // 找到对应的字体选项
+                    for (let i = 0; i < fontFamilySelect.options.length; i++) {
+                        if (fontFamilySelect.options[i].value === fontFamily) {
+                            fontFamilySelect.selectedIndex = i;
+                            currentFontSpan.textContent = fontFamilySelect.options[i].text;
+                            break;
+                        }
+                    }
+                    
+                    applyFontStyles();
+                }
+            } catch (error) {
+                console.error('加载字体设置失败:', error);
+            }
         }
 
         // 更新字体大小选择器
@@ -1216,9 +2263,15 @@ console.log(message);</pre>
                 sidebar.style.color = '#e6e6e6';
                 
                 // 更新目录项样式
-                document.querySelectorAll('.toc-item').forEach(item => {
+                document.querySelectorAll('.toc-item, .bookmark-item').forEach(item => {
                     item.style.color = '#e6e6e6';
                     item.style.borderBottomColor = '#444';
+                });
+                
+                // 更新标签页样式
+                document.querySelectorAll('.sidebar-tab').forEach(tab => {
+                    tab.style.color = '#e6e6e6';
+                    tab.style.backgroundColor = '#2d2d2d';
                 });
                 
             } else {
@@ -1234,15 +2287,46 @@ console.log(message);</pre>
                 sidebar.style.color = '#333';
                 
                 // 恢复目录项样式
-                document.querySelectorAll('.toc-item').forEach(item => {
+                document.querySelectorAll('.toc-item, .bookmark-item').forEach(item => {
                     item.style.color = '';
                     item.style.borderBottomColor = '';
+                });
+                
+                // 恢复标签页样式
+                document.querySelectorAll('.sidebar-tab').forEach(tab => {
+                    tab.style.color = '';
+                    tab.style.backgroundColor = '';
                 });
             }
         }
 
         // 处理键盘快捷键
         function handleKeydown(event) {
+            // 检查是否按下了Ctrl+F（搜索）
+            if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+                event.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+                return;
+            }
+            
+            // 检查是否按下了Ctrl+B（添加书签）
+            if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+                event.preventDefault();
+                showAddBookmarkPanel();
+                return;
+            }
+            
+            // 检查是否在搜索输入框中
+            if (event.target === searchInput) {
+                if (event.key === 'Escape') {
+                    searchPanel.classList.add('hidden');
+                    clearSearchHighlights();
+                }
+                return;
+            }
+            
+            // 其他快捷键
             switch(event.key) {
                 case 'ArrowLeft':
                     event.preventDefault();
@@ -1258,6 +2342,18 @@ console.log(message);</pre>
                         nextChapter();
                     }
                     break;
+                case 'Escape':
+                    // 关闭搜索面板
+                    if (!searchPanel.classList.contains('hidden')) {
+                        searchPanel.classList.add('hidden');
+                        clearSearchHighlights();
+                    }
+                    // 关闭书签面板
+                    if (!bookmarkPanel.classList.contains('hidden')) {
+                        bookmarkPanel.classList.add('hidden');
+                        overlay.classList.add('hidden');
+                    }
+                    break;
             }
         }
 
@@ -1267,7 +2363,11 @@ console.log(message);</pre>
         }
 
         // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            // 加载字体设置
+            loadFontSettings();
+        });
     </script>
 </body>
 </html>
